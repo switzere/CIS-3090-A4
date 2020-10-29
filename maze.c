@@ -3,14 +3,13 @@
 #include <math.h>
 #include <string.h>
 #include <omp.h>
-#include <time.h>
 
 void serialMaze(int n);
 void parallelMaze(int n);
 
 void init(int n);
-void push(int x, int y, int dir, int stack[1000][3], int *size);
-void pop(int *x, int *y, int *dir, int stack[1000][3], int *size);
+void push(int x, int y, int dir, int stack[10000][3], int *size);
+void pop(int *x, int *y, int *dir, int stack[10000][3], int *size);
 
 int inRand(int *arr, int countRand, int n);
 
@@ -27,11 +26,35 @@ char ** board;
 int countArr[4];
 
 
+//TODO -s what does he mean by seed?
+
 int main(int argc, char **argv) {
   int n = 11;
+  int seed = -1;
+  int argPtr;
 
   int thread_count = 4;
 
+  if(argc > 1) {
+    argPtr = 1;
+    while(argPtr < argc) {
+      if(strcmp(argv[argPtr], "-n") == 0) {
+        n = strtol(argv[argPtr+1], NULL, 10);
+        argPtr += 2;
+      }
+      else if(strcmp(argv[argPtr], "-s") == 0) {
+        seed = strtol(argv[argPtr+1], NULL, 10);
+        srand(seed);
+        argPtr += 2;
+      }
+      else {
+        printf("USAGE: %s <-n size of board> <-s seed>\n", argv[0]);
+        exit(1);
+      }
+    }
+  }
+
+/*
   if(argc == 3) {
     if(strcmp(argv[1],"-n") == 0) {
       n = strtol(argv[2], NULL, 10);
@@ -39,7 +62,7 @@ int main(int argc, char **argv) {
     else {
       printf("Error reading command\n");
     }
-  }
+  }*/
 
   init(n);
 
@@ -97,7 +120,7 @@ void init(int n) {
 /*
 Push location (x,y) with a direction onto the stack
 */
-void push(int x, int y, int dir, int stack[1000][3], int* size) {
+void push(int x, int y, int dir, int stack[10000][3], int* size) {
   *size = *size + 1;
 
   for(int i = *size; i > 0; i--) {
@@ -114,7 +137,7 @@ void push(int x, int y, int dir, int stack[1000][3], int* size) {
 /*
 Pop location (x,y) and direction from stack
 */
-void pop(int* x, int* y, int* dir, int stack[1000][3], int* size) {
+void pop(int* x, int* y, int* dir, int stack[10000][3], int* size) {
   *x = stack[0][0];
   *y = stack[0][1];
   *dir = stack[0][2];
@@ -146,13 +169,12 @@ int inRand(int *arr, int countRand, int n) {
 Create maze in serial
 */
 void serialMaze(int n) {
-  int stack[1000][3];
+  int stack[10000][3];
   int size = 0;
   int done = 0;
   int x, y;
 
-  time_t t;
-  srand((unsigned) time(&t));
+
 
 
 
@@ -250,13 +272,11 @@ void serialMaze(int n) {
 Create maze in parallel
 */
 void parallelMaze(int n) {
-  int parStack[1000][3];
+  int parStack[10000][3];
   int size = 0;
 
-  time_t t;
-  srand((unsigned) time(&t));
 
-  for(int i = 0; i < 1000; i++) {
+  for(int i = 0; i < 10000; i++) {
     parStack[i][0] = -1;
     parStack[i][1] = -1;
     parStack[i][2] = -1;
