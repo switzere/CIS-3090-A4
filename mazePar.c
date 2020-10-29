@@ -219,20 +219,29 @@ void parallelMaze(int n) {
       #pragma omp critical
       {
 
-        board[x][y] = thread;
+        if(board[x][y] == '.') {
 
-        if(dir == 0) {
-          board[x+1][y] = thread;
+          board[x][y] = thread;
+
+          if(dir == 0) {
+            board[x+1][y] = thread;
+          }
+          else if(dir == 1) {
+            board[x][y-1] = thread;
+          }
+          else if(dir == 2) {
+            board[x-1][y] = thread;
+          }
+          else if(dir == 3) {
+            board[x][y+1] = thread;
+          }
+
         }
-        else if(dir == 1) {
-          board[x][y-1] = thread;
+        else {
+          //If spot taken, dont push any neighbours
+          countRand = 4;
         }
-        else if(dir == 2) {
-          board[x-1][y] = thread;
-        }
-        else if(dir == 3) {
-          board[x][y+1] = thread;
-        }
+
 
       }
 

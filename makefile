@@ -1,7 +1,7 @@
-all: maze
+all: maze mazep
 
 maze: maze.c
 	gcc -g maze.c -o maze -fopenmp
 
-mazePar: mazePar.c
-	gcc -g mazePar.c -o mazePar -fopenmp
+mazep: maze.c
+	gcc -g -DPARALLEL maze.c -o mazep -fopenmp

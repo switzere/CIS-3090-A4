@@ -8,11 +8,11 @@
 //#define PARALLEL
 
 void serialMaze(int n);
-void parallelMaze(int n, int givenX, int givenY);
+void parallelMaze(int n);
 
 void init(int n);
-void push(int x, int y, int dir);
-void pop(int *x, int *y, int *dir);
+void push(int x, int y, int dir, int stack[1000][3], int *size);
+void pop(int *x, int *y, int *dir, int stack[1000][3], int *size);
 
 int getBoardValue(int x, int y);
 
@@ -24,11 +24,12 @@ int inRand(int *arr, int countRand, int n);
 2 - down
 3 - left
 */
-int stack[1000][3];
-int size;
+//int stack[1000][3];
+//int size;
 
 char ** board;
 
+int countArr[4];
 
 int main(int argc, char **argv) {
   int n = 11;
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
 
   if(argc == 3) {
     if(strcmp(argv[1],"-n") == 0) {
-      printf("%s\n", argv[2]);
+    //  printf("%s\n", argv[2]);
 
       n = strtol(argv[2], NULL, 10);
     }
@@ -50,16 +51,13 @@ int main(int argc, char **argv) {
 
   #ifdef PARALLEL
   # pragma omp parallel num_threads(thread_count)
-  parallelMaze(n, 1, 1);
-  parallelMaze(n, 1, n-2);
-  parallelMaze(n, n-2, 1);
-  parallelMaze(n, n-2, n-2);
+  parallelMaze(n);
   #else
   serialMaze(n);
   #endif
 
 
-  printf("\n\n");
+  //printf("\n\n");
 
   for(int i = 0; i < n; i++) {
     for(int j = 0; j < n; j++) {
@@ -67,6 +65,13 @@ int main(int argc, char **argv) {
     }
     printf("\n");
   }
+
+  #ifdef PARALLEL
+  for(int i = 0; i < 4; i++) {
+    printf("process %d count: %d\n", i, countArr[i]);
+  }
+  #endif
+
 
   return 0;
 }
@@ -77,13 +82,17 @@ int main(int argc, char **argv) {
 
 void init(int n) {
 
-  for(int i = 0; i < 1000; i++) {
+  /*for(int i = 0; i < 1000; i++) {
     stack[i][0] = -1;
     stack[i][1] = -1;
     stack[i][2] = -1;
   }
 
-  size = 0;
+  size = 0;*/
+
+  for(int i = 0; i < 4; i++) {
+    countArr[i] = 0;
+  }
 
   board = malloc(sizeof(char*)*n);
 
@@ -100,13 +109,13 @@ void init(int n) {
 
 
 
-void push(int x, int y, int dir) {
-  size++;
+void push(int x, int y, int dir, int stack[1000][3], int* size) {
+  *size = *size + 1;
   //printf("push x: %d, y: %d. newSize of: %d\n",x,y,size);
   //printf("size: %d\n",size);
   //printf("x: %d, y: %d\n", x, y);
 
-  for(int i = size; i > 0; i--) {
+  for(int i = *size; i > 0; i--) {
     //printf("i: %d\n", i);
     stack[i][0] = stack[i-1][0];
     stack[i][1] = stack[i-1][1];
@@ -118,7 +127,7 @@ void push(int x, int y, int dir) {
   stack[0][2] = dir;
 }
 
-void pop(int* x, int* y, int* dir) {
+void pop(int* x, int* y, int* dir, int stack[1000][3], int* size) {
 
 
   *x = stack[0][0];
@@ -127,13 +136,13 @@ void pop(int* x, int* y, int* dir) {
 
   //printf("pop x: %d, y: %d. newSize of: %d\n", *x, *y, size-1);
 
-  for(int i = 0; i < size-1; i++) {
+  for(int i = 0; i < *size-1; i++) {
     stack[i][0] = stack[i+1][0];
     stack[i][1] = stack[i+1][1];
     stack[i][2] = stack[i+1][2];
   }
 
-  size--;
+  *size = *size - 1;
 }
 
 
@@ -160,6 +169,8 @@ void setBoardValue(int x, int y, int val) {
 
 
 void serialMaze(int n) {
+  int stack[1000][3];
+  int size = 0;
   int done = 0;
   int x, y;
 
@@ -167,13 +178,13 @@ void serialMaze(int n) {
   x = 1;
   y = 1;
 
-  printf("SerialMaze\n");
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++) {
-      printf("%c",board[i][j]);
-    }
-    printf("\n");
-  }
+  // printf("SerialMaze\n");
+  // for(int i = 0; i < n; i++) {
+  //   for(int j = 0; j < n; j++) {
+  //     printf("%c",board[i][j]);
+  //   }
+  //   printf("\n");
+  // }
 
   int dir = -1;
 
@@ -219,25 +230,25 @@ void serialMaze(int n) {
           //up
           if(x - 2 > 0 && r == 0) {
             if(board[x-2][y] == '.') {
-              push(x-2, y, 0);
+              push(x-2, y, 0, stack, &size);
             }
           }
           //right
           if(y + 2 < n && r == 1) {
             if(board[x][y+2] == '.') {
-              push(x, y+2, 1);
+              push(x, y+2, 1, stack, &size);
             }
           }
           //down
           if(x + 2 < n && r == 2) {
             if(board[x+2][y] == '.') {
-              push(x+2, y, 2);
+              push(x+2, y, 2, stack, &size);
             }
           }
           //left
           if(y - 2 > 0 && r == 3) {
             if(board[x][y-2] == '.') {
-              push(x, y-2, 3);
+              push(x, y-2, 3, stack, &size);
             }
           }
 
@@ -251,7 +262,7 @@ void serialMaze(int n) {
     }
 
       if(size > 0) {
-        pop(&x, &y, &dir);
+        pop(&x, &y, &dir, stack, &size);
       }
       else {
         done = 1;
@@ -273,8 +284,12 @@ void serialMaze(int n) {
 
 }
 
-void parallelMaze(int n, int givenX, int givenY) {
+
+
+
+void parallelMaze(int n) {
   int parStack[1000][3];
+  int size = 0;
 
   for(int i = 0; i < 1000; i++) {
     parStack[i][0] = -1;
@@ -286,25 +301,43 @@ void parallelMaze(int n, int givenX, int givenY) {
 
   int my_rank = omp_get_thread_num();
   int thread_count = omp_get_num_threads();
-  printf("parallelMaze %d -- Hello from thread %d of %d\n", n, my_rank, thread_count);
+//  printf("parallelMaze %d -- Hello from thread %d of %d\n", n, my_rank, thread_count);
 
 
   int done = 0;
   int x, y;
 
-  char thread = (my_rank + 1) + '0';
-
-  x = givenX;
-  y = givenY;
-
-  #pragma omp critical
-  for(int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++) {
-      printf("%c",board[i][j]);
-    }
-    printf("\n");
+  if(my_rank == 0) {
+    x = 1;
+    y = 1;
   }
+  else if(my_rank == 1) {
+    x = n - 2;
+    y = 1;
+  }
+  else if(my_rank == 2) {
+    x = n - 2;
+    y = n - 2;
+  }
+  else if(my_rank == 3) {
+    x = 1;
+    y = n - 2;
+  }
+
+  char thread = my_rank + '0';
+
+
+//printf("Thread: %c\n",thread);
+//  printf("X: %d, Y: %d\n", x, y);
+
+  // for(int i = 0; i < n; i++) {
+  //   for(int j = 0; j < n; j++) {
+  //     printf("%c",board[i][j]);
+  //   }
+  //   printf("\n");
+  // }
   int dir = -1;
+  int placedFlag = 0;
 
   while(done == 0) {
 
@@ -317,20 +350,38 @@ void parallelMaze(int n, int givenX, int givenY) {
       #pragma omp critical
       {
 
-        board[x][y] = thread;
+        if(board[x][y] == '.') {
 
-        if(dir == 0) {
-          board[x+1][y] = thread;
+          if(placedFlag != 0) {
+            //placed
+            countArr[my_rank]++;
+          }
+          else {
+            //not placed yet
+            placedFlag = 1;
+          }
+
+          board[x][y] = thread;
+
+          if(dir == 0) {
+            board[x+1][y] = thread;
+          }
+          else if(dir == 1) {
+            board[x][y-1] = thread;
+          }
+          else if(dir == 2) {
+            board[x-1][y] = thread;
+          }
+          else if(dir == 3) {
+            board[x][y+1] = thread;
+          }
+
         }
-        else if(dir == 1) {
-          board[x][y-1] = thread;
+        else {
+          //If spot taken, dont push any neighbours
+          countRand = 4;
         }
-        else if(dir == 2) {
-          board[x-1][y] = thread;
-        }
-        else if(dir == 3) {
-          board[x][y+1] = thread;
-        }
+
 
       }
 
@@ -353,28 +404,28 @@ void parallelMaze(int n, int givenX, int givenY) {
             //up
             if(x - 2 > 0 && r == 0) {
               if(board[x-2][y] == '.') {
-                push(x-2, y, 0);
+                push(x-2, y, 0, parStack, &size);
               }
             }
             //right
             if(y + 2 < n && r == 1) {
               if(board[x][y+2] == '.') {
-                push(x, y+2, 1);
+                push(x, y+2, 1, parStack, &size);
               }
             }
             //down
             if(x + 2 < n && r == 2) {
               if(board[x+2][y] == '.') {
-                push(x+2, y, 2);
+                push(x+2, y, 2, parStack, &size);
               }
             }
             //left
             if(y - 2 > 0 && r == 3) {
               if(board[x][y-2] == '.') {
-                push(x, y-2, 3);
+                push(x, y-2, 3, parStack, &size);
               }
             }
-
+          //  printf("Size: %d\n",size);
           }
 
 
@@ -392,10 +443,16 @@ void parallelMaze(int n, int givenX, int givenY) {
         while(popped == 0) {
           #pragma omp critical
           {
-
-            pop(&x, &y, &dir);
+            //printf("\n\n\n\n\n\n\n\n\n");
+            pop(&x, &y, &dir, parStack, &size);
             if(board[x][y] == '.') {
               popped = 1;
+            }
+            else {
+              if(size == 0) {
+                done = 1;
+                popped = 1;
+              }
             }
 
           }
@@ -403,19 +460,20 @@ void parallelMaze(int n, int givenX, int givenY) {
 
       }
       else {
+        //printf("size < 0\n\n\n\n\n");
         done = 1;
       }
 
-      #pragma omp critical
-      {
-        printf("\n");
-        for(int i = 0; i < n; i++) {
-          for(int j = 0; j < n; j++) {
-            printf("%c",board[i][j]);
-          }
-          printf("\n");
-        }
-      }
+      // #pragma omp critical
+      // {
+      //   printf("\n");
+      //   for(int i = 0; i < n; i++) {
+      //     for(int j = 0; j < n; j++) {
+      //       printf("%c",board[i][j]);
+      //     }
+      //     printf("\n");
+      //   }
+      // }
 
   }
 
